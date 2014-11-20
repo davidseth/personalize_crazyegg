@@ -1,0 +1,103 @@
+<?php
+
+/**
+ * @file personalize_ga.module
+ * TODO: Enter file description here.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function personalize_crazyegg_help($path, $arg) {
+  switch ($path) {
+    // Help for Google Analytics Integration
+    case 'admin/config/content/personalize/crazyegg':
+      return '<p>' . t('This module provides integration between the Personalize module (and related modules) and Google Analytics.') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function personalize_crazyegg_menu() {
+  $items = array();
+  $items['admin/config/content/personalize/crazyegg'] = array(
+    'type' => MENU_NORMAL_ITEM,
+    'title' => 'Crazyegg heatmap Integration',
+    'description' => 'Configuration settings for the Crazyegg Heatmap Integration module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('personalize_crazyegg_admin_form'),
+    'access arguments' => array('administer personalize configuration'),
+    'file' => 'personalize_crazyegg.admin.inc'
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_page_build().
+ */
+function personalize_crazyegg_page_build(&$page) {
+  // Add the necessary JavaScript for Google Analytics integration.
+  $path = drupal_get_path('module', 'personalize_crazyegg');
+  $settings = array(
+    'sendDecisions' => variable_get('personalize_crazyegg_enabled', TRUE),
+  );
+
+  $options = array(
+    'scope' => 'footer',
+  );
+
+  $page['page_top']['personalize_crazyegg'] = array(
+    '#attached' => array(
+      'js' => array(
+        $path . '/personalize_crazyegg.js' => $options,
+        array(
+          'data' => array('personalize_crazyegg' => $settings),
+          'type' => 'setting'
+        ),
+      ),
+    )
+  );
+}
+
+/**
+ * Implements hook_page_alter() to insert JavaScript to the appropriate scope/region of the page.
+ */
+function personalize_crazyegg_page_alter(&$page) {
+  global $user;
+
+  $account_id = variable_get('personalize_crazyegg_account_id', '');
+  $crazyegg_enabled = variable_get('personalize_crazyegg_enabled', TRUE);
+
+  if ($account_id && $crazyegg_enabled) {
+
+    $scope = 'footer';
+
+    $account_path = str_pad($account_id, 8, "0", STR_PAD_LEFT);
+    $account_path = substr($account_path, 0, 4) . '/' . substr($account_path, 4, 8);
+    $account_path = "pages/scripts/" . $account_path . ".js";
+
+    $script_host = "dnn506yrbagrg.cloudfront.net";
+
+    $script = '
+      setTimeout(function(){var a=document.createElement("script");
+      var b=document.getElementsByTagName(\'script\')[0];
+      a.src=document.location.protocol+"//' . $script_host . '/' . $account_path . '";
+      a.async=true;a.type="text/javascript";b.parentNode.insertBefore(a,b)}, 1);
+      ';
+
+    drupal_add_js($script, array('scope' => $scope, 'type' => 'inline'));
+
+	//$user_type = drup
+    $script_setup = '
+      // docs: http://support.crazyegg.com/set-user-variables/
+      function CE_READY() {
+        CE2.set(1, "anonymous user");
+        //CE2.set(2, "");
+      }
+      ';
+
+    drupal_add_js($script_setup, array('scope' => $scope, 'type' => 'inline'));
+
+  }
+}

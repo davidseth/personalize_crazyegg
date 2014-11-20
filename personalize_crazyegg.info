@@ -1,0 +1,5 @@
+name = Personalize Crazyegg Integration
+description = Integrates personalize.module and related modules with CrazyEgg fore realtime heatmap generation
+dependencies[] = personalize
+package = Personalization
+core = 7.x
